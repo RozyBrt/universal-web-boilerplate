@@ -2,16 +2,18 @@
 
 import React, { useState } from "react";
 import { useProducts } from "@/core/products/hooks/useProducts";
-import { 
-  Plus, Edit2, Trash2, Loader2, 
-  Search, X, Save, AlertCircle 
+import {
+  Plus, Edit2, Trash2, Loader2,
+  X, Save, AlertCircle, AlertTriangle
 } from "lucide-react";
 import { Product } from "@/core/database/types";
 
 export default function ProductsPage() {
   const { products, loading, error, addProduct, updateProduct, deleteProduct } = useProducts();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [formData, setFormData] = useState<Partial<Product>>({
     name: "",
     price: 0,
@@ -30,6 +32,11 @@ export default function ProductsPage() {
     setIsModalOpen(true);
   };
 
+  const handleOpenDeleteModal = (product: Product) => {
+    setProductToDelete(product);
+    setIsDeleteModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -42,6 +49,17 @@ export default function ProductsPage() {
     } catch (err: any) {
       alert("Gagal menyimpan data: " + (err.message || "Unknown error"));
       console.error(err);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (productToDelete) {
+      try {
+        await deleteProduct(productToDelete.id);
+        setIsDeleteModalOpen(false);
+      } catch (err: any) {
+        alert("Gagal menghapus: " + err.message);
+      }
     }
   };
 
@@ -60,7 +78,7 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Menu Angkringan</h1>
           <p className="text-gray-500 mt-1">Kelola daftar menu, harga, dan stok barang bray.</p>
         </div>
-        <button 
+        <button
           onClick={() => handleOpenModal()}
           className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
         >
@@ -114,14 +132,14 @@ export default function ProductsPage() {
                     </td>
                     <td className="px-6 py-5 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
+                        <button
                           onClick={() => handleOpenModal(product)}
                           className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                         >
                           <Edit2 size={18} />
                         </button>
-                        <button 
-                          onClick={() => deleteProduct(product.id)}
+                        <button
+                          onClick={() => handleOpenDeleteModal(product)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
                         >
                           <Trash2 size={18} />
@@ -151,10 +169,10 @@ export default function ProductsPage() {
             <form onSubmit={handleSubmit} className="p-8 space-y-5">
               <div className="space-y-1">
                 <label className="text-sm font-bold text-gray-700 ml-1">Nama Menu</label>
-                <input 
+                <input
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   placeholder="Contoh: Sate Usus"
                 />
@@ -162,9 +180,9 @@ export default function ProductsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm font-bold text-gray-700 ml-1">Kategori</label>
-                  <select 
+                  <select
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none bg-white"
                   >
                     <option>Makanan</option>
@@ -174,34 +192,34 @@ export default function ProductsPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-bold text-gray-700 ml-1">Stok</label>
-                  <input 
+                  <input
                     type="number"
                     required
                     value={formData.stock}
-                    onChange={(e) => setFormData({...formData, stock: parseInt(e.target.value)})}
+                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   />
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-bold text-gray-700 ml-1">Harga (Rp)</label>
-                <input 
+                <input
                   type="number"
                   required
                   value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: parseInt(e.target.value)})}
+                  onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                 />
               </div>
               <div className="pt-4 flex gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 py-3 px-4 border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-all"
                 >
                   Batal
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2"
                 >
@@ -209,6 +227,37 @@ export default function ProductsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-8 text-center">
+              <div className="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-2">Hapus Menu?</h3>
+              <p className="text-gray-500">
+                Yakin mau hapus <span className="font-bold text-gray-900">"{productToDelete?.name}"</span>? Kalo udah dihapus nggak bisa balik lagi loh.
+              </p>
+            </div>
+            <div className="px-8 pb-8 flex gap-3">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="flex-1 py-3 px-4 border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-all"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 py-3 px-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-100 transition-all"
+              >
+                Ya, Hapus!
+              </button>
+            </div>
           </div>
         </div>
       )}
