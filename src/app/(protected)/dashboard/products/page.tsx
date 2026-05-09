@@ -39,7 +39,8 @@ export default function ProductsPage() {
         await addProduct(formData);
       }
       setIsModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
+      alert("Gagal menyimpan data: " + (err.message || "Unknown error"));
       console.error(err);
     }
   };
