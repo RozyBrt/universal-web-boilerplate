@@ -1,15 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { env } from "@/config/env.config";
+import { supabase } from "@/core/infrastructure/supabase/client";
 
 export function useSession() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  // Kita buat instance supabase sementara di sini untuk listener
-  // (Atau bisa ambil dari container kalau mau lebih strict)
-  const supabase = createClient(env.supabaseUrl, env.supabaseAnonKey);
 
   useEffect(() => {
     // 1. Ambil session awal

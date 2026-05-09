@@ -1,13 +1,9 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { AuthProviderInterface } from "./AuthProviderInterface";
-import { env } from "@/config/env.config";
+import { supabase } from "@/core/infrastructure/supabase/client";
 
 export class SupabaseAuthProvider implements AuthProviderInterface {
-  private supabase: SupabaseClient;
-
-  constructor() {
-    this.supabase = createClient(env.supabaseUrl, env.supabaseAnonKey);
-  }
+  private supabase: SupabaseClient = supabase;
 
   async signIn(credentials: { email: string; password?: string }) {
     const { data, error } = await this.supabase.auth.signInWithPassword({
