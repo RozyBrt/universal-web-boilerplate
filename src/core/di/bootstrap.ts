@@ -1,5 +1,6 @@
 import { container } from "./Container";
 import { SupabaseAuthProvider } from "@/core/auth/providers/SupabaseAuthProvider";
+import { ProductRepository } from "@/core/database/repositories/ProductRepository";
 import { modules } from "@/config/modules.config";
 
 export function bootstrapDI() {
@@ -8,8 +9,8 @@ export function bootstrapDI() {
     if (modules.auth.provider === "supabase") {
       container.registerFactory("auth", () => new SupabaseAuthProvider());
     }
-    // Add other providers here (NextAuth, etc.)
   }
 
-  // Register other services (API, Payment, etc.)
+  // Register Repositories
+  container.registerFactory("productRepository", () => new ProductRepository());
 }
