@@ -18,6 +18,15 @@ export class SupabaseAuthProvider implements AuthProviderInterface {
     return data;
   }
 
+  async signUp(credentials: { email: string; password?: string }) {
+    const { data, error } = await this.supabase.auth.signUp({
+      email: credentials.email,
+      password: credentials.password || "",
+    });
+    if (error) throw error;
+    return data;
+  }
+
   async signOut() {
     const { error } = await this.supabase.auth.signOut();
     if (error) throw error;

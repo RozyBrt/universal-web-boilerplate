@@ -14,8 +14,11 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+import { useRouter } from "next/navigation";
+
 export const LoginForm: React.FC = () => {
   const { signIn } = useAuth();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,8 +35,7 @@ export const LoginForm: React.FC = () => {
     setError(null);
     try {
       await signIn(data);
-      // Redirect or show success (handle inside useAuth or here)
-      alert("Login berhasil!");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan saat login");
     } finally {
