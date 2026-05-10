@@ -1,34 +1,47 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useProducts } from "@/core/products/hooks/useProducts";
+import { useCategory } from "@/core/database/hooks/useCategory";
 import {
   Plus, Edit2, Trash2, Loader2,
-  X, Save, AlertCircle, AlertTriangle
+  X, Save, AlertCircle, AlertTriangle, Camera, ImageIcon
 } from "lucide-react";
 import { Product } from "@/core/database/types";
+import { toast } from "react-hot-toast";
+import { supabase } from "@/core/infrastructure/supabase/client";
 
 export default function ProductsPage() {
   const { products, loading, error, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { data: categories } = useCategory();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState<Partial<Product>>({
     name: "",
     price: 0,
-    category: "Makanan",
+    category: "",
     stock: 0,
+    image_url: "",
   });
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
       setFormData(product);
+      setImagePreview(product.image_url || null);
     } else {
       setEditingProduct(null);
-      setFormData({ name: "", price: 0, category: "Makanan", stock: 0 });
+      setFormData({ name: "", price: 0, category: "", stock: 0, image_url: "" });
+      setImagePreview(null);
     }
+    setImageFile(null);
     setIsModalOpen(true);
   };
 
@@ -37,18 +50,63 @@ export default function ProductsPage() {
     setIsDeleteModalOpen(true);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+    
+    setIsSaving(true);
     try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, formData);
-      } else {
-        await addProduct(formData);
+      let finalImageUrl = formData.image_url;
+
+      if (imageFile) {
+        finalImageUrl = await uploadImage(imageFile);
       }
+
+      const productData = { ...formData, image_url: finalImageUrl };
+
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, productData);
+      } else {
+        await addProduct(productData);
+      }
+
       setIsModalOpen(false);
+      toast.success(editingProduct ? "Menu berhasil diupdate bray!" : "Menu baru berhasil ditambah!");
     } catch (err: any) {
-      alert("Gagal menyimpan data: " + (err.message || "Unknown error"));
-      console.error(err);
+      console.error("Save error details:", err);
+      toast.error(`Gagal menyimpan: ${err.message || "Koneksi bermasalah bray!"}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -57,8 +115,9 @@ export default function ProductsPage() {
       try {
         await deleteProduct(productToDelete.id);
         setIsDeleteModalOpen(false);
+        toast.success("Menu berhasil dihapus!");
       } catch (err: any) {
-        alert("Gagal menghapus: " + err.message);
+        toast.error("Gagal menghapus: " + err.message);
       }
     }
   };
@@ -99,7 +158,7 @@ export default function ProductsPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nama Menu</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Produk</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Kategori</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Harga</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Stok</th>
@@ -117,7 +176,16 @@ export default function ProductsPage() {
                 products.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-6 py-5">
-                      <p className="font-bold text-gray-900">{product.name}</p>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden border border-gray-100 flex items-center justify-center text-gray-400">
+                          {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon size={20} />
+                          )}
+                        </div>
+                        <p className="font-bold text-gray-900">{product.name}</p>
+                      </div>
                     </td>
                     <td className="px-6 py-5">
                       <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full uppercase italic">
@@ -156,8 +224,8 @@ export default function ProductsPage() {
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 my-8">
             <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h3 className="text-xl font-black text-gray-900">
                 {editingProduct ? "Edit Menu" : "Tambah Menu Baru"}
@@ -167,6 +235,38 @@ export default function ProductsPage() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-8 space-y-5">
+              {/* Image Upload Area */}
+              <div className="space-y-1">
+                <label className="text-sm font-bold text-gray-700 ml-1">Foto Produk</label>
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-40 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all overflow-hidden relative group"
+                >
+                  {imagePreview ? (
+                    <>
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Camera className="text-white" size={32} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-gray-100 rounded-full text-gray-400">
+                        <Camera size={24} />
+                      </div>
+                      <p className="text-xs font-bold text-gray-400 uppercase">Klik untuk upload foto</p>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    className="hidden" 
+                    accept="image/*"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-sm font-bold text-gray-700 ml-1">Nama Menu</label>
                 <input
@@ -185,9 +285,12 @@ export default function ProductsPage() {
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none bg-white"
                   >
-                    <option>Makanan</option>
-                    <option>Minuman</option>
-                    <option>Camilan</option>
+                    <option value="">Pilih Kategori</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1">
@@ -219,11 +322,22 @@ export default function ProductsPage() {
                 >
                   Batal
                 </button>
-                <button
+                <button 
                   type="submit"
-                  className="flex-1 py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2"
+                  disabled={isSaving}
+                  className={`flex-1 py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2 ${
+                    isSaving ? "opacity-70 cursor-not-allowed" : "hover:bg-indigo-700"
+                  }`}
                 >
-                  <Save size={18} /> Simpan
+                  {isSaving ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" /> Proses...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={18} /> Simpan
+                    </>
+                  )}
                 </button>
               </div>
             </form>

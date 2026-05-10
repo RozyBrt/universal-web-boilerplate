@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
     { name: "Menu Angkringan", href: "/dashboard/products", icon: Briefcase },
-    { name: "Team Members", href: "#", icon: Users },
+    { name: "Kategori", href: "/dashboard/category", icon: Users },
     { name: "Settings", href: "#", icon: Settings },
   ];
 

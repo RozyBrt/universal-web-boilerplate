@@ -1,6 +1,7 @@
 import { container } from "./Container";
 import { SupabaseAuthProvider } from "@/core/auth/providers/SupabaseAuthProvider";
 import { ProductRepository } from "@/core/database/repositories/ProductRepository";
+import { CategoryRepository } from "@/core/database/repositories/CategoryRepository";
 import { modules } from "@/config/modules.config";
 
 export function bootstrapDI() {
@@ -13,4 +14,5 @@ export function bootstrapDI() {
 
   // Register Repositories
   container.registerFactory("productRepository", () => new ProductRepository());
+  container.registerFactory("categoryRepository", () => new CategoryRepository());
 }
